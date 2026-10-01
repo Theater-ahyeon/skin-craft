@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skin Craft · 参考图前端还原"
+  short_description: "用生图素材定制完整前端，从参考图与源码映射到真实组件和浏览器截图验收"
+  default_prompt: "使用 $skin-craft，根据参考图与项目源码生成定制素材、实现完整前端，并用真实浏览器截图对照验收。"

@@ -1,86 +1,98 @@
-# Asset Prompt Pack — templates
+# 生图提示词与素材规格
 
-Paste-and-adapt prompt templates. Replace `{...}` placeholders. Keep a
-locked palette (4-5 named hexes) and paste it into every prompt; use the
-same values for post-processing color grading.
+## 先写资产表
 
-## Global blocks
+每项记录：用途、来源、参考文件、目标比例、源/运行尺寸、透明要求、保护区域、缩放策略、状态和当前选择。只生成实际需要的项。
 
-**Character block** (shared by every character prompt):
-
-```text
-{角色全名}，{发型发色}，{瞳色}，{标志性部件：光环/兽耳/翅膀/帽子}，
-{服装主色与风格描述}，{白色过膝袜/长靴等下装}，{气质关键词}
-```
-
-**Scene suffix**:
-
-```text
-完全对称构图，{两侧结构：彩窗/立柱/拱门}，{中央区域留空明亮——界面会压在
-这里}，{光效：晨光斜射/星穹烛光}，月白与圣金主色调（#F7F5EE / #D9C089），
-辉光蓝点缀（#A9C6E8），柔和光感，轻柔景深，精致动漫美术，游戏官方美术风格，
-高细节，无文字，无边框，无UI
-```
-
-**Object suffix**:
-
-```text
-正视图，无透视，平面纹理视图，边缘干净利落，高细节，精致游戏UI素材风格
-```
-
-**Negative prompt**:
-
-```text
-文字，水印，签名，UI元素，边框，低质量，过曝，畸形手指，多余肢体，杂乱背景
-```
-
-**Character cutout suffix**:
-
-```text
-全身，完整露出双脚和鞋子，纯浅灰背景，single full-body
-```
-
-## Asset checklist (with structural requirements)
-
-| Asset | Size / ratio | Hard requirement |
+| 项目 | 生成关注点 | 落地方式 |
 | --- | --- | --- |
-| Scene light | 1920×1080+ (16:9) | center area empty (UI lands there); both sides are safe zones for characters |
-| Scene dark | same | same composition as light (image-to-image from the light one); only lighting changes |
-| Main cutout L/R | 1024×1536+ (2:3), uniform light-gray bg | feet fully visible (bottom-anchored), subject ≥90% height |
-| Third-form cutout | same | alternate pose/form (pair it with a model-family or mode switch) |
-| Chibi | 768×768+, uniform bg | single character, head-to-body ≈ 1:2 |
-| Top/bottom trim tile | 2048×256 / 2048×128 | horizontally seamless, repeatable |
-| Corner ornament | 1024×1024 | draw ONE corner only (frontend mirrors to four) |
-| Nine-slice plate (button/ribbon) | 2048×256 | ornament caps ~15% each end; middle plain and stretchable |
-| Hollow frame (composer panel) | 2048×512 | center pure black (keyed to transparent later); bar ~12% of height |
-| U-drape / crest / bow | square-ish | symmetric, plain background, closed shapes survive cutout |
-| Icon | 256×256 | crop from the main cutout's head region; no separate generation |
+| 页面设计稿 | 完整布局与状态，参考的风格与人物关系 | 对照稿，不能当交互页面 |
+| 场景 | 人物焦点、内容留白、可裁切区域 | 原图锁定或新背景，按用户选择 |
+| 侧栏材料 | 皮革/金属/纸张等近景，可重复或伸缩区域 | 材料层 + DOM 导航与头像框 |
+| 输入框/卡片框 | 透明中心、固定端帽、伸缩中段、角饰 | nine-slice、分层图片或 CSS 边线 |
+| 发送按钮 | 独立物件、透明底、中心稳定 | 实际 button 的装饰层 |
+| 导航图标 | 同套材质与笔触，各功能有独立语义 | 实际显示尺寸检查 |
+| Logo | 清楚剪影、透明底、小尺寸可读 | 同源用于品牌组件，文字另排 |
+| 人物/头像 | 同一角色、姿态与表情，必要部件完整 | 透明人物或原图头像区域 |
 
-## Workflow rules
+尺寸按界面与服务能力确定，不承诺服务恰好按提示词输出。画布规格与实际文件尺寸分别记录。
 
-1. Generate/approve the scene first; it becomes the style reference
-   (垫图) for every decorative plate.
-2. Scene pair (light/dark): identical composition, image-to-image the
-   light one into night. Composition drift is what makes theme switches
-   feel broken.
-3. Characters: feet complete, subject ≥90% of frame height, plain
-   light-gray background (easiest to key out).
-4. Nine-slice plates: record the cap width in pixels after cutting — the
-   frontend `border-image-slice` must match it.
-5. Midjourney users: add `--ar` per the table and `--cref <official art URL>`
-   for character consistency; niji model for anime.
+## 可改写的提示词结构
 
-## Midjourney quick examples
+字段只是框架，风格来自该项目已选参考。
+
+**完整页面**
 
 ```text
-Scene:
-grand white cathedral nave interior, symmetrical composition, golden strings
-of light hanging from the dome, floating golden halo rings, polished ivory
-marble floor reflecting holy light, empty bright center area, ivory and gold
-palette with pale blue accents, anime game official art style --ar 16:9 --niji 6
-
-Character:
-Phoebe-style oracle maiden, full body, silver-white hair with icy blue tips,
-golden halo beside her head, nun-style white dress with gold trim, holding
-strings of golden light, light gray background --ar 2:3 --niji 6 --cref <URL>
+以附图 A 为主要艺术参考，以 B 的布局补充真实功能。
+绘制 [页面/状态]，目标视口 [宽×高]。
+保留 [人物形象与气质、材料、色彩、构图焦点]。
+侧栏 [尺度/比例]，顶部 [尺度]，主区 [真实功能与内容密度]。
+体现 [选中/空白/加载/有内容等状态]。
+背景采用附图 C；保持人物、场景和配色，不另造城市。
+装饰不遮挡正文，交互控件留清晰区域。
 ```
+
+稿中的短文案可辅助理解，生产界面必须重排 DOM 文案。锁定背景的像素不通过生成稿证明，最终实现直接使用锁定原图。
+
+**组件/图标**
+
+```text
+依据已选设计稿的 [材料/纹饰] 绘制独立 [组件名称]。
+正视、无场景透视，与参考的材质和颜色一致。
+目标比例 [比例]，透明背景，无文字、无水印。
+保护 [边角/封蜡/徽章]；[中心透明/中段可平铺]。
+不添加人物，不把整张界面画进去。
+```
+
+**Logo**
+
+```text
+为 [产品] 生成独立图形标志，呼应 [主题符号/角色气质]。
+剪影清楚，小尺寸仍可辨认，透明背景。
+不包含名称或字母；文字在网页单独排版。
+```
+
+不要套用前一项目的“对称教堂”“玻璃卡片”“必须浅灰抠图”等偏好。主题一致不要求不同槽位重复同一张外框。
+
+## 调用与保存
+
+1. 查看服务的使用要求。编辑本地图前检查图片，按服务支持的本地引用或会话引用附上全部目标图，不混用互斥参数。
+2. 透明底启用真实透明输出选项，不能只写提示词。输出检查 alpha，棋盘截图不是透明文件。
+3. 保存提示词、参考版本、服务回执与真实尺寸。保留源图，把运行文件放入项目目录，不只依赖工具临时路径。
+4. 被否定结果记原因并移出选用清单；回到认可的参考，不让拒绝稿接管参考。
+5. 原图已锁定时不再生成背景，把绘图用于指定的框、图标、logo 或材料。
+
+## 素材清单与只读审计
+
+路径相对于 `--root`。先将源图复制到项目参考目录；审计器拒绝跳出根目录的路径和符号链接。
+
+```json
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "approved-scene",
+      "source": "docs/design/references/scene.png",
+      "runtime": "web/public/theme/scene.webp",
+      "size": [3840, 2160],
+      "must_match_source_pixels": true
+    },
+    {
+      "id": "nav-letter",
+      "runtime": "web/public/theme/icons/letter.webp",
+      "size": [192, 192],
+      "require_transparency": true
+    }
+  ]
+}
+```
+
+尺寸是案例，换成项目规格。可加 `source_sha256`，值为实际源文件 64 位 SHA-256。只有要求像素不变且未缩放时设置 `must_match_source_pixels`；有意缩小图标时检查对应运行尺寸与 alpha。
+
+```sh
+python scripts/audit_assets.py --root ./project --manifest ./project/docs/design/assets.json
+python scripts/audit_assets.py --root ./project --manifest ./project/docs/design/assets.json --report ./checks/assets.json
+```
+
+通过退出码 0，失败 1。显式报告操作只写新文件，不可指向已有文件。动态图报告帧数；像素一致检查仅适用于静态图，不冒充逐帧核验。

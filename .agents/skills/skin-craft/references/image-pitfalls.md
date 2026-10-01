@@ -1,121 +1,41 @@
-# Image Pitfalls — failure gallery and exact fixes
+# 素材问题与生图排查
 
-Every entry is a real production failure from a shipped skin. Symptoms are
-what the user sees; verify with the three-backdrop check (red / dark-navy /
-checker) after every fix.
+## 区分调用失败与视觉不合格
 
-## 1. "Transparent person" — garments see-through
+调用失败记录服务名、状态码、耗时与可分享错误，不记录密钥、请求头或私有签名 URL。用户觉得丑时比较脸部、姿态、构图、材料与色彩的偏差，不误诊为服务故障。
 
-- **Seen as**: dress/skirt shows the background through it; whole figure
-  looks ghosted on dark UIs.
-- **Cause**: semantic matting (rembg-class models) classifies painted sheer
-  fabric as "background visible" and assigns partial alpha (40-200).
-- **Fix order**:
-  1. Prefer boundary flood fill on uniform backgrounds (see
-     `skin_image_tools.py floodcut`) — the interior keeps 100% original
-     pixels.
-  2. If matting output must be used: solidify alpha — `a >= 110 → 255`,
-     `a <= 22 → 0`, linear ramp between.
-- **Why not just raise alpha on matted output**: matted RGB in low-alpha
-  regions is premultiplied against the original background — raising alpha
-  exposes dark smudges (see #2).
+确认真实服务回执、文件存在与可解码输出，再记录尺寸、帧数和 alpha。成功 HTTP 状态、模型名称或下载地址不能代替有效图片。
 
-## 2. Dark smudge blobs on garments
+## 工具不可用
 
-- **Seen as**: irregular near-black patches on white/pale clothing after
-  forcing opacity.
-- **Cause**: matting models emit RGB premultiplied by alpha; low-alpha
-  fabric pixels carry darkened colors. Forcing opacity exposes them.
-- **Fix**: for interior pixels take RGB from the ORIGINAL image (matting
-  output is pixel-aligned with its input); only the alpha comes from the
-  matte. Or unpremultiply: `rgb' = clamp(rgb * 255 / max(a, 1))`.
+1. 查原生工具、插件或明确配置的服务，读调用约束。一条路径失败不代表整个生图功能不可用。
+2. 根据实际错误区分缺工具、引用图不可读、参数冲突、认证、限流、超时、服务端错误和无效输出。
+3. 本地与会话图像引用可能互斥，附齐目标图；编辑保留原透明度。
+4. 如果已有转发器参与调用，核实状态码、Content-Type、Content-Encoding、解压和输出字段。零点契约曾有“保留压缩响应却按 JSON 解码”的可核验故障；不能据此假定所有失败都是解压问题。
+5. 只有用户已授权且代码/服务属于任务范围时修复可控部分。全局代理、其他工具安装、账号和付费网关不在做前端的隐含授权内。
+6. 明确参数错误可修正重试，短暂服务错误按工具建议有限重试。同因重复且无新证据时停止，不无限连发收费请求；报告原因、已做检查和缺失输入，继续独立工作。
 
-## 3. Glass-bubble / dirty dome over head
+不打印 token、修改安全配置或悄悄切未经授权的服务。明确要求生图而受阻时，说明哪些素材尚未完成，不能把 CSS 或提示词伪装成生图产物。
 
-- **Seen as**: semi-transparent whitish dome covering hair/head.
-- **Cause**: the artwork's glass/light-bubble effect survived matting as a
-  translucent region.
-- **Fix**: re-cut with an anime-specialized matting model
-  (`isnet-anime`-class), or drop the dome via a whitish-translucent rule
-  (low saturation + high lightness + alpha < 235 → 0) outside the solid
-  body mask.
+## 常见素材问题
 
-## 4. Light fringe / glowing outline on dark UIs
+| 现象 | 判断与处理 |
+| --- | --- |
+| 背景不是指定图 | 检查映射/缓存，接回锁定源；不再绘场景 |
+| 脸、姿态或衣服漂移 | 重新附主参考，指出偏差，缩小编辑目标 |
+| 白底或棋盘画进图片 | 检查 alpha，使用透明输出或背景移除编辑 |
+| 图标在实际尺寸糊掉 | 简化轮廓与细节，统一材料，按运行尺寸检查 |
+| 封蜡/头像变椭圆 | 保持比例和独立定位，不非等比拉伸 |
+| 材料堵住正文或按钮 | 框中心透明，正文用 DOM，装饰不截点击 |
+| 浅色边缘污染 | 在深色/红色/棋盘背景观察，用绘图编辑修正 |
+| 衣服变透明 | 检查是否抠图误判高光，重新编辑 alpha/输出 |
+| 静态预览成深色块 | 检查 CSS 图像变量 fallback、URL 与 scope |
+| 光晕出现矩形边 | 裁切截断软光，扩大安全区或修正透明衰减 |
 
-- **Seen as**: 1-2px pale halo around the whole silhouette; screams on
-  dark backgrounds, invisible on light ones.
-- **Cause**: the original light background's antialiased edge remains in
-  the boundary band.
-- **Fix**: boundary-band decontamination — for opaque pixels with a
-  transparent 4-neighbor, `dist(rgb, bg) < kill → alpha 0`;
-  `kill..soft → alpha scaled by (d - kill) / (soft - kill)`. Use the
-  ORIGINAL image's corner-average background color. Never globally key out
-  near-white: interior satin highlights get eaten.
+图像编辑遵守环境工具规则。原生 imagegen 可用时，用它生成、修图、移除背景与抠图，不默认用 Python/色键脚本修改图片。用户明确选择像素处理、转换或打包路线时，才采用允许的方法。读取像素、解码、比较与写报告不属于修图。
 
-## 5. Hard rectangular patch behind a glow
+## 非生成式打包
 
-- **Seen as**: a pale rectangle with straight edges behind/around the
-  character (halo burst, radiant aura) — only obvious on dark UIs.
-- **Cause**: the flood boundary crossed the middle of a wide soft glow
-  gradient; the glow outside the cut was removed, leaving a hard edge
-  through a bright region.
-- **Fix**: distance-field alpha restoration — for currently-transparent
-  pixels, `alpha = clamp((dist(rgb, bg) - 16) * 3, 0..235)` computed from
-  the ORIGINAL image, unioned with the figure mask (max), then 1-2 rounds
-  of feather (Gaussian-blur alpha, max-blend) and one decontam pass.
-  The glow fades radially again; the figure mask keeps the body solid.
+允许时可无损编码、改变运行尺寸或派生应用图标。保留源图和变换记录。要求背景像素不变时比较解码 RGBA，不能因为 PNG/WebP 文件 SHA 不同就认定图片内容不同。
 
-## 6. Dark solid slab where a decorative plate should be
-
-- **Seen as**: a solid dark-navy rounded slab around/in place of a framed
-  element — only in static previews or after skin reloads.
-- **Cause**: a CSS rule sets `border-style: solid; border-width: 42px;`
-  and `border-image-source: var(--plate-art)` — when the variable is
-  undefined the browser falls back to painting the border in currentColor
-  at the declared width.
-- **Fix**: give every art variable a fallback:
-  `border-image-source: var(--plate-art, url('relative/or/transparent-gradient'))`.
-  Audit all `var(--*art*)` uses; one missed var is one dark slab.
-
-## 7. Styles missing in the marketplace static previewer
-
-- **Seen as**: marketplace preview shows default UI; local render looks
-  perfect.
-- **Cause**: static previewers inject the stylesheet and set a
-  loader-owned scope attribute (e.g. `html[data-dsh-skin="<id>"]`); they
-  never execute skin JavaScript. A skin whose CSS scopes under an
-  attribute set by its own script renders as nothing.
-- **Fix**: scope the stylesheet under the loader-owned attribute; keep
-  script-set attributes for internal state only. Add declarative
-  background media in the manifest if the contract supports it (the
-  static previewer paints those).
-
-## 8. Enclosed white pockets between ornament curls
-
-- **Seen as**: white patches inside filigree/openwork after edge flood.
-- **Cause**: enclosed background pockets are not connected to the canvas
-  edge, so edge flood never reaches them.
-- **Fix**: classify remaining connected components after the flood; a
-  component whose mean color is near the background (and roughly uniform)
-  is a background pocket → remove. Guard the tolerance so a uniform pale
-  object interior (e.g. a satin band) is not removed — compare component
-  mean distance to bg against a tight threshold and require neutrality.
-
-## 9. Same texture reused on two frames
-
-- **Seen as**: users call it lazy; reviewers flag it.
-- **Fix**: each framed slot gets its own plate. A fabric sheet MAY be
-  cropped into different bands (top/bottom trim) when the crops read as
-  distinct ornaments.
-
-## Self-check (three backdrops) — after every fix
-
-```sh
-python scripts/skin_image_tools.py verify OUT.png --bg red
-python scripts/skin_image_tools.py verify OUT.png --bg navy
-python scripts/skin_image_tools.py verify OUT.png --bg checker
-```
-
-Red exposes light/white residue; navy simulates the dark theme and exposes
-gray fringes; checker exposes semi-transparent garbage. Look at silhouette
-edges, garment interiors, and enclosed holes.
+历史强制 floodcut/decontam/glow 脚本不再作为默认路线：衣服、背景与光晕无法用通用阈值可靠区分，裁切对齐也需要准确记录。本版使用只读 `audit_assets.py`，不自动重写图片。

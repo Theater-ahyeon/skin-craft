@@ -1,91 +1,55 @@
-# Frontend Fusion Rules — five rules for a reversible overlay skin
+# 前端融合规则
 
-These rules are platform-agnostic: they apply to a chat-app web GUI, an
-IDE theme, or any website frontend. The host exposes *some* stable seam —
-semantic CSS variables, data attributes, a plugin manifest — everything
-below hangs off that seam.
+## 两种落地方式
 
-## Rule 1 — One scope attribute gates everything
+原生改造进入现有组件、路由与资源构建系统，修改用户授权的界面。认证、权限、配置、消息发送、文件操作和 WebSocket 使用原业务链路，不为好看的截图绕开它们。
 
-Every skin rule starts with the same scope (e.g.
-`body[data-dsh-skin="myskin"]` or the loader-owned
-`html[data-dsh-skin="myskin"] body`). On: styles apply. Off: the attribute
-is removed and the UI is pristine.
+可卸载皮肤走宿主公开主题/插件接口。用一个根 scope 隔离选择器；记录新增节点、原属性值、样式、监听器与 observer/timer，卸载全部恢复。优先稳定语义变量。静态预览器可能不运行 JavaScript，scope 与基础资源适配其实际契约。
 
-Uninstall audit — all of these must be reverted on removal:
+## 将定制语言转成组件
 
-- every DOM node the skin inserted (keep a registry);
-- every attribute value the skin wrote (store originals, restore on removal;
-  reference-count leases when several skins may coexist);
-- every stylesheet tag, listener, observer, and timer (disposables).
+拆为页头、侧栏人物区、导航、历史记录、底部操作、页面壳、消息卡片、输入框和弹窗。材料可共用，标志性构图与端帽按槽位调整。不能因为旧皮肤只允许覆盖层，就禁止用户要求的原生源码改造。
 
-Verify: install → uninstall → screenshot-diff against the pristine UI.
+侧栏质感来自材料、折面/切角、金边、纹章/头像框、选中封蜡与文字层次。先固定几何，再调材质和光效；保留按钮语义、键盘焦点、清晰标签及 `aria-current`。图标的显示尺寸与实际触控目标分别设置。
 
-## Rule 2 — Remap semantic tokens, not components
+选中、hover、focus、disabled 都需要可辨识状态。材料不代替表单标签、错误说明与可读的 DOM 文本。
 
-Hosts style themselves through semantic variables
-(`--button-fill`, `--label-primary`, `--border-l2`, `--bg-overlay`, ...).
-Override THOSE, scoped to the skin scope, in both themes:
+## 可伸缩框与装饰层
+
+角饰、徽章与端帽保持比例，中段可伸缩：
+
+- nine-slice：中心简单、边缘可伸展，按源图记录切片尺寸。
+- 多层图片：端帽独立，中段铺材料，人物与封蜡独立定位。
+- CSS 几何加材料：切角、金线和布局由 CSS 控制，指定生图的材料或图标使用真实生成文件。
+
+装饰层 `pointer-events: none`，需要时 `aria-hidden`；真实控件接收事件。裁切层不能裁掉焦点环、下拉项和弹窗。
 
 ```css
-body[data-dsh-skin="myskin"] {
-  --host-button-fill: #d9c089;
-  --host-label-primary: #2a3450;
-  /* ...full set, light theme */
+.themed-composer {
+  border-image-source: var(--composer-frame, linear-gradient(transparent, transparent));
 }
-body[data-dsh-skin="myskin"][data-theme="dark"] { /* dark set */ }
 ```
 
-One token block = whole-app reskin, and it survives host updates far better
-than component overrides. Only fall back to component selectors for
-decorations the host does not tokenize.
+图像变量提供 fallback，防止缺变量时出现整片实线边框。检查运行、构建产物和静态图册的资源路径。
 
-## Rule 3 — Decoration layers live inside host layout boxes
+## 背景与层叠
 
-Backdrop + character layers go INSIDE the content container (absolute,
-inset 0) — not fixed to the viewport. Layout pushes (side panels, modals)
-then move/re-fit the artwork with the content. Keep the content itself
-`position: relative` WITHOUT a z-index: it paints above the decoration by
-DOM order while popups keep their page-level tier.
+场景放在所属布局容器内，随侧栏/文件面板变化；是否固定到视口取决于设计。装饰、内容、popover、drawer、modal 分层明确，不用更大的全局 z-index 反复补洞。
 
-## Rule 4 — Plate craft: nine-slice, hollow plates, and fallbacks
+锁定原图时使用适当的 `object-position` / `background-position` 和获准蒙层提高对比度；不修脸、不换城市、不生成替代构图。桌面保留人物焦点，移动版调整裁切或减少人物占位。
 
-- Nine-slice: `border-image-source: var(--skin-plate); border-image-slice:
-  <cap-width-px>; border-image-width: <display cap px>;` — ornament caps
-  fixed, middle stretches. Record cap widths when cutting the asset.
-- Hollow plates (frames over live controls): source image center is
-  transparent; the element under it keeps working.
-- **Every art variable carries a fallback**:
-  `var(--skin-plate, url('assets/...'))` or at minimum
-  `var(--skin-plate, linear-gradient(transparent, transparent))`.
-  An undefined `border-image-source` combined with a declared
-  `border-style`/`border-width` paints a solid currentColor slab. This is
-  the "dark slab in static preview" bug.
-- Reference assets with paths that resolve in EVERY context the stylesheet
-  appears in (static previewer, marketplace CDN, runtime). If the runtime
-  rewrites asset URLs through an API base, do it in script and use absolute
-  URLs in CSS variables.
+空白首页可全幅场景与大输入区；已有消息后提供稳定滚动空间给对话、代码、文件与终端。概念图的展示高度不能限制长内容。
 
-## Rule 5 — State projection and motion discipline
+## 功能和状态
 
-Project app state onto attributes (landing vs chat, modal open, sidebar
-width bucket) from script; CSS reacts with attribute selectors only:
+复用 store、请求、验证、路由和会话状态。无凭据时显示设置入口与真实空状态，不增加会伪造成功的路径。视觉角色、产品名称与智能体身份分别处理。
 
-```css
-body[data-dsh-skin="myskin"][data-state="chat"] .my-character { height: 64%; }
-```
+纯图像/文字替换做相关构建与布局检查；改表单、认证或异步行为时增加对应回归。不要因换皮无故重构全站。
 
-Motion: transform/opacity only; one-shot effects remove their trigger
-attribute after the animation; `will-change` only during the animation;
-a full `prefers-reduced-motion` block. Ship light/dark token sets and a
-narrow-layout degradation (hide large art, shrink ornaments).
+主题使用真实设置与系统监听器；按项目需求支持，不强制每个作品生成明暗两套场景。动效可暂停且尊重减少动态，优先 transform/opacity，避免持续 layout 和重型滤镜。
 
-## Launch checklist
+## 品牌
 
-- [ ] Scope on/off leaves zero residue (install → uninstall → diff).
-- [ ] Both themes complete; contrast checked on both.
-- [ ] Narrow layout degrades (large art hidden, ornaments shrink).
-- [ ] Static previewer (if any) renders stylesheet correctly without JS.
-- [ ] All art vars have fallbacks; no dark slabs in any preview.
-- [ ] Performance spot-check: resize storm, long conversation, dark theme.
-- [ ] Attribution files present; license stated (fan art → non-commercial).
+无字 logo 作为同源资源供页头、登录、加载等读取，名称由 DOM 排版。favicon/PWA 尺寸从同一源图派生并校验路径；可用版本化 URL 避免图标缓存。
+
+资源可读、打包、桌面实际运行和系统安装是不同验收，不能以静态 manifest 代替真实安装。
