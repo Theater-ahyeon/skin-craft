@@ -1,15 +1,17 @@
-# Skin Craft · 从灵感到完整前端
+# Skin Craft · 通用项目前端定制
 
-从一句想法或一张喜欢的图开始，做出真实、可操作的完整前端：启发设计方向、寻找图片参考、选择可用生图来源，确定概念后拆解素材、实现页面与交互，再用运行截图和用户反馈逐步修正。没有参考图也可以开始。
+让 Agent 根据某个项目的源码、用途与用户偏好，定制真实、可操作的前端界面。适用于品牌网站、数据后台、电商、内容站、工具应用和主题皮肤；既能改造现有项目，也能在没有参考图时从想法开始。
 
-This agent skill takes an idea from discovery through reference search, image-provider selection, concept design, custom assets, implementation and runtime verification. It supports projects without initial reference images and keeps the existing `skin-craft` install path.
+方法不变：理解项目 → 探索方向与参考 → 选择所需生图来源 → 选定概念 → 制作定制素材 → 在真实组件中实现 → 运行验证与反馈迭代。沿用项目技术栈和业务链路，按功能选择布局与组件；角色、聊天界面和装饰皮肤是其中的使用场景。
+
+Skin Craft helps agents customize project frontends across websites, dashboards, commerce and tools, with or without reference images. It connects source-aware design, optional image generation, real component implementation and runtime verification while preserving the project's stack and behavior.
 
 ## 使用
 
 克隆本仓库，将 [.agents/skills/skin-craft](.agents/skills/skin-craft) **整个目录**放到所用 Agent 的 skill 目录。Codex 可安装到 `~/.codex/skills/skin-craft/`，也可保留工作区的 `.agents/skills/skin-craft/`，具体发现方式以宿主为准。新会话加载后调用：
 
 ```text
-$skin-craft 我没有参考图，想做一套有独特风格的聊天皮肤。先帮我找方向和素材，让我选择可用的生图来源，再从概念做到完整可运行版本。
+$skin-craft 帮我定制当前项目的前端。先理解源码、用途和关键流程；我没有参考图，请给出适合它的设计方向，需要生图时让我选择来源，再实现完整界面并用运行截图验证。
 ```
 
 已有明确参考时可以直接继续：
@@ -20,15 +22,18 @@ $skin-craft 根据这些参考图和项目源码重新设计完整前端，必�
 
 也可只要求设计图/素材，或要求不修改宿主源码的可卸载皮肤。沿用已经选定的方向、素材和服务，从当前缺少的步骤继续，不重复开场问卷。
 
+定制不等于增加装饰：后台可重点改善密度、筛选和表格；官网可重点设计品牌、排版和主视觉；电商保留真实商品、规格和交易流程；角色主题再使用人物、材质和定制边框。生图用于需要的视觉资产，数据、文字与交互由真实组件承载。
+
 ## 这套方法
 
 | 阶段 | 产出 |
 | --- | --- |
+| 理解项目 | 当前界面基线、用户任务、技术栈、改动范围与必须保留的行为 |
 | 灵感探索 | 少量有区别的方向、角色/场景/材料线索与用户选择 |
 | 素材与来源 | 本地或网上参考、使用范围、可用生图服务与用户偏好 |
 | 源码与视觉依据 | 页面/状态矩阵、角色身份与位置、主/辅助参考、锁定原图 |
 | 设计与生图 | 选定完整概念、素材规格、真实绘图回执、独立透明组件 |
-| 组件融合 | 定制侧栏、可伸缩装饰、清晰 DOM 文案、原生交互 |
+| 组件融合 | 共享视觉规则、项目所需业务组件、可选定制素材、真实交互 |
 | 运行与反馈 | 实际 HTTP 服务、桌面/移动截图、行为验证、局部修正和可控回退 |
 | 交付 | 源图/运行资源映射、真实 README 截图、验证边界与获准发布 |
 
